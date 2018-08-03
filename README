@@ -1,0 +1,148 @@
+OMI SO2 Data Plotting System
+----------------------------
+
+Designed by J Cole-Baker
+GNS Science
+2008-2009
+
+
+DIRECTORY STRUCTURE
+-------------------
+
+The following directories must exist in the OMI processing directory (this 
+is the directory where the .SAV file is located for the compiled version):
+
+config 
+  - Configuration Files. This should contain omi.ini (configuration file). 
+    If a logo is to be displayed on images, the logo image should also 
+    be in config. This directory should also contain 'badscenes.ini'
+    (see below). 
+
+incoming 
+  - Upload folder. This folder is writable by the NASA FTP login. Data
+    files are uploaded here automatically.
+
+logs 
+  - Log files. batch_processing.log is used to keep track of batch 
+    processing of OMI data. so2_summary.csv is a CSV format file 
+    containing total SO2 for each region by date. New rows are appended 
+    automatically by the batch processing. 
+
+The following directories must also exist. The location of these directories
+can be set in the config file (omi.ini): 
+
+archive 
+  - Archived OMI data files, filed by date (directories are named with 
+    the convention 'YYYY-MM-DD')
+
+output 
+  - Output plots, filed by date (directories are named with the 
+    convention 'YYYY-MM-DD')
+
+temp 
+  - Temp working space, used during batch processing. 
+
+
+CONFIG FILE
+-----------
+
+The config file config/omi.ini contains settings to control how OMI batch
+processing operates. Data lines have the format:
+
+NAME=Value
+
+Other lines are ignored. See the file for a description of the config 
+values which can be set.
+
+BAD SCENES FILE
+---------------
+
+Some 'scenes' (spectrometer pixels) in the OMI data are giving bad 
+data. The list of bad scenes has changed over time. The Bad Scenes
+list file ('badscenes.ini') sets the list of bad scenes by date. 
+These pixels are filtered out in the processing. When processing 
+a given date, the algorithm uses the last list of bad scenes 
+with a date equal to or earlier than the date being processed. 
+See notes in 'badscenes.ini'. 
+
+
+LOG FILE
+--------
+
+The OMI Batch processing log (logs/batch_processing.log) keeps track of 
+which dates have been processed by the OMI SO2 batch plotting system.
+
+The file format is as follows.
+
+Data lines look like this: 
+YYYY-MM-DD NN PENDING|STARTED|DONE|SKIPPED [Comment]
+
+I.e. They start a date (YYYY-MM-DD), then a 2-digit number (file count), 
+then either 'PENDING', 'STARTED', 'DONE' or 'SKIPPED', followed by an 
+optional comment. Items are seperated by a single space. 
+
+All other lines are treated as invalid.
+
+Example: 
+2009-07-19 08 DONE Processed OK. (Mon Jul 20 06:00:57 2009)
+
+Note that the file is overwritten each time processing is carried out. 
+Invalid/Comment lines will be removed, and Data lines will be sorted by date. 
+
+The file count (NN) is the number of data files found for the specified date. 
+
+PENDING|STARTED|DONE|SKIPPED records the status of processing. 
+
+PENDING: No data files exist for the date yet. 
+STARTED: Processing was started. If this is left in the log, it generally
+         means that the processing application hung and was terminated. 
+         On sucessful completion, the status will be set to DONE. 
+DONE:    Processing finished sucessfully with the specified number of 
+         source files. 
+SKIPPED: When the processing application reached this date, the status was
+         'STARTED', meaning that the application hung last time. If this
+         happens, the status is set to 'SKIPPED' and further processing of
+         this day is not attempted. 
+
+The batch processing application looks at the last n days before today 
+(where n is set by BATCHDAYS setting in config/omi.ini). 
+
+For each day, the number of data files available is compared to the NN 
+value (or 0 if the day isn't in the log). If the number of files has 
+changed, the day is processed. When processing is completed, the status is 
+set to DONE. Each time a day is checked, a comment is set in the log. E.g.: 
+
+"Checked. No new data. (Mon Jul 20 06:00:06 2009)"
+
+The log file is used by the batch processing code and should not normally 
+be edited. However, you can force the batch processing to behave in a 
+certain way by editing the log file. For example, changing a date to 
+'SKIPPED' will prevent any further attempt to process that date. Changing
+NN to 00 will cause the batch processing to reprocess the date (if it is 
+within the processing date range specified by the BATCHDAYS setting in 
+config/omi.ini).  
+
+When the log file is found to contain 365 days or more,  it is written out to a 
+new file called 'batch_processing_YYYYMMDD.log' and a new log is started. 
+
+
+SO2 SUMMARY
+-----------
+
+The file logs/so2_summary.csv contains total SO2 (ktonnes) for each output
+region. This value is automatically calculated during batch processing and
+added to the file. The format of the file must be as follows: 
+
+Date,Region Name 1,Region Name 2,...    <--- Header Row
+DD-Mmm-YYYY,n.nn,n.nn,...               <--- Data Row
+
+Example: 
+
+Date,South West Pacific,Vanuatu,New Caledonia
+18-Jul-2009,96.74,7.78,6.26
+19-Jul-2009,94.69,11.65,9.02
+...
+
+It's best not to open this file into an application such as a spreadsheet, 
+as such applications may change the file format arbitrarily. Make a copy 
+of the file somewhere else first. 
